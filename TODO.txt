@@ -1,0 +1,9 @@
+- Local multiplayer
+- 360 degree shooting (RIVE of tank spel)
+
+- Dying
+- Basic enemy
+- Basic pickup
+
+//Platformer
+- One way platforms

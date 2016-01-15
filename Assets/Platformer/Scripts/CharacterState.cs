@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-namespace Platformer
+namespace Sjabloon
 {
     public interface CharacterState
     {

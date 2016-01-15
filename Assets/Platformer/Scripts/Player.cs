@@ -1,32 +1,12 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-namespace Platformer
+namespace Sjabloon
 {
-    public class Player : MonoBehaviour
+    //Data class
+    [System.Serializable]
+    public class MovementProperties
     {
-        public enum PlayerState
-        {
-            Walk = 0,
-            Jump = 1,
-            Fall = 2
-        }
-
-        [SerializeField]
-        private CharacterController2D m_CharacterController;
-        public CharacterController2D CharacterController
-        {
-            get { return m_CharacterController; }
-        }
-
-        private CharacterState m_CurrentState;
-        private CharacterState[] m_CharacterStates = new CharacterState[3]; //Cache of all the states
-
-        [SerializeField]
-        private Animator m_Animator;
-        private bool m_IsFiring;
-
-        //Movement parameters (maybe put in another struct)
         [SerializeField]
         private float m_Gravity;
         public float Gravity
@@ -55,12 +35,6 @@ namespace Platformer
             get { return m_MaxRunSpeed; }
         }
 
-        private Vector2 m_Velocity = new Vector2();
-        public Vector2 Velocity
-        {
-            get { return m_Velocity; }
-        }
-
         [SerializeField]
         private float m_JumpAcceleration;
         public float JumpAcceleration
@@ -81,26 +55,83 @@ namespace Platformer
         {
             get { return m_MaxFallSpeed; }
         }
+    }
 
+    public class Player : MonoBehaviour
+    {
+        public enum PlayerState
+        {
+            Walk = 0,
+            Jump = 1,
+            Fall = 2
+        }
+
+        [SerializeField]
+        private int m_PlayerID;
+        public int PlayerID
+        {
+            get { return m_PlayerID; }
+        }
+
+        [SerializeField]
+        private CharacterController2D m_CharacterController;
+        public CharacterController2D CharacterController
+        {
+            get { return m_CharacterController; }
+        }
+
+        [SerializeField]
+        private Animator m_Animator;
+        private bool m_IsFiring;
+
+        [SerializeField]
+        private Gun m_Gun;
+
+        [SerializeField]
+        private MovementProperties m_MovementProperties;
+        public MovementProperties MovementProperties
+        {
+            get { return m_MovementProperties; }
+        }
+
+        private CharacterState m_CurrentState;
+        private CharacterState[] m_CharacterStates = new CharacterState[3]; //Cache of all the states
+
+        private Vector2 m_Velocity = new Vector2();
+        public Vector2 Velocity
+        {
+            get { return m_Velocity; }
+        }
+
+        //Functions
         private void Start()
+        {
+            InitializeControls();
+            InitializeStates();
+        }
+
+        private void InitializeControls()
         {
             //Movement
             InputManager inputManager = InputManager.Instance;
-            inputManager.BindAxis("HorizontalAxis", KeyCode.RightArrow, KeyCode.LeftArrow);
-            inputManager.BindAxis("HorizontalAxis", 0, ControllerButtonCode.Right, ControllerButtonCode.Left);
-            inputManager.BindAxis("HorizontalAxis", 0, ControllerAxisCode.LeftStickX);
+            inputManager.BindAxis("HorizontalAxis_" + m_PlayerID, KeyCode.RightArrow, KeyCode.LeftArrow);
+            inputManager.BindAxis("HorizontalAxis_" + m_PlayerID, m_PlayerID, ControllerButtonCode.Right, ControllerButtonCode.Left);
+            inputManager.BindAxis("HorizontalAxis_" + m_PlayerID, m_PlayerID, ControllerAxisCode.LeftStickX);
 
             //Jumping
-            inputManager.BindButton("Jump", KeyCode.UpArrow, InputManager.ButtonState.OnPress);
-            inputManager.BindButton("Jump", 0, ControllerButtonCode.A, InputManager.ButtonState.OnPress);
+            inputManager.BindButton("Jump_" + m_PlayerID, KeyCode.UpArrow, InputManager.ButtonState.OnPress);
+            inputManager.BindButton("Jump_" + m_PlayerID, m_PlayerID, ControllerButtonCode.A, InputManager.ButtonState.OnPress);
 
-            inputManager.BindButton("JumpPressed", KeyCode.UpArrow, InputManager.ButtonState.Pressed);
-            inputManager.BindButton("JumpPressed", 0, ControllerButtonCode.A, InputManager.ButtonState.Pressed);
+            inputManager.BindButton("JumpPressed_" + m_PlayerID, KeyCode.UpArrow, InputManager.ButtonState.Pressed);
+            inputManager.BindButton("JumpPressed_" + m_PlayerID, m_PlayerID, ControllerButtonCode.A, InputManager.ButtonState.Pressed);
 
             //Shooting
-            inputManager.BindButton("Fire", KeyCode.Space, InputManager.ButtonState.Pressed);
-            inputManager.BindButton("Fire", 0, ControllerButtonCode.X, InputManager.ButtonState.Pressed);
+            inputManager.BindButton("Fire_" + m_PlayerID, KeyCode.Space, InputManager.ButtonState.Pressed);
+            inputManager.BindButton("Fire_" + m_PlayerID, m_PlayerID, ControllerButtonCode.X, InputManager.ButtonState.Pressed);
+        }
 
+        private void InitializeStates()
+        {
             //Create all the states
             m_CharacterStates[0] = new WalkState(this);
             m_CharacterStates[1] = new JumpState(this);
@@ -112,8 +143,9 @@ namespace Platformer
         private void Update()
         {
             UpdateMovement();
+            UpdateShooting();
             UpdateAnimations();
-            UpdateScale();
+            UpdateRotation();
         }
 
         private void UpdateMovement()
@@ -121,19 +153,30 @@ namespace Platformer
             Vector2 newDelta = m_CurrentState.Update(m_Velocity);
 
             //Even megaman has to obey the speed limits!
-            if (Mathf.Abs(newDelta.x) > m_MaxRunSpeed)
-                newDelta.x = m_MaxRunSpeed * Mathf.Sign(m_Velocity.x);
+            if (Mathf.Abs(newDelta.x) > m_MovementProperties.MaxRunSpeed)
+                newDelta.x = m_MovementProperties.MaxRunSpeed * Mathf.Sign(m_Velocity.x);
 
-            if (newDelta.y < -m_MaxFallSpeed)
-                newDelta.y = -m_MaxFallSpeed;
+            if (newDelta.y < -m_MovementProperties.MaxFallSpeed)
+                newDelta.y = -m_MovementProperties.MaxFallSpeed;
 
             //Move
             m_Velocity = m_CharacterController.Move(newDelta.x, newDelta.y);
         }
 
+        private void UpdateShooting()
+        {
+            if (m_Gun == null)
+                return;
+
+            if (m_IsFiring)
+            {
+                m_Gun.Fire();
+            }
+        }
+
         private void UpdateAnimations()
         {
-            float runFranction = Mathf.Abs(m_Velocity.x / m_MaxRunSpeed);
+            float runFranction = Mathf.Abs(m_Velocity.x / m_MovementProperties.MaxRunSpeed);
             m_Animator.SetFloat("VelocityFraction", runFranction);
 
             if (m_Animator.GetBool("IsGrounded") != m_CharacterController.IsGrounded)
@@ -147,12 +190,21 @@ namespace Platformer
             }
         }
 
-        private void UpdateScale()
+        private void UpdateRotation()
         {
-            if (Mathf.Abs(m_Velocity.x) > 0.0f)
+            if (m_Velocity.x == 0.0f)
+                return;
+
+            float rotation = 0.0f;
+            if (Mathf.Sign(m_Velocity.x) < 0.0f)
             {
-                transform.localScale = new Vector3(Mathf.Sign(m_Velocity.x), 1.0f, 1.0f);
+                rotation = 180.0f;
             }
+
+            transform.localRotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+                
+            //Used to update the scale instead of rotation (but then all our children don't come along!)    
+            //transform.localScale = new Vector3(Mathf.Sign(m_Velocity.x), 1.0f, 1.0f);
         }
 
         public void SetState(PlayerState newState)
@@ -162,8 +214,6 @@ namespace Platformer
 
             m_CurrentState = m_CharacterStates[(int)newState];
             m_CurrentState.OnEnter();
-
-            //Debug.Log("Entered state: " + newState);
         }
 
         public void SetFiring(bool fireState)
@@ -193,17 +243,19 @@ namespace Platformer
 
         public Vector2 Update(Vector2 velocity)
         {
+            MovementProperties movementProperties = m_PlayerRef.MovementProperties;
+
             float deltaX = velocity.x;
-            float deltaY = velocity.y - m_PlayerRef.Gravity;
+            float deltaY = velocity.y - movementProperties.Gravity;
 
             //Moving horizontally
-            float horizValue = InputManager.Instance.GetAxis("HorizontalAxis");
-            deltaX += horizValue * m_PlayerRef.Acceleration;
+            float horizValue = InputManager.Instance.GetAxis("HorizontalAxis_" + m_PlayerRef.PlayerID);
+            deltaX += horizValue * movementProperties.Acceleration;
 
             if (horizValue == 0.0f && deltaX != 0.0f)
             {
                 float sign = Mathf.Sign(m_PlayerRef.Velocity.x);
-                deltaX -= m_PlayerRef.Friction * sign;
+                deltaX -= movementProperties.Friction * sign;
 
                 if (sign != Mathf.Sign(deltaX))
                     deltaX = 0.0f;
@@ -212,7 +264,7 @@ namespace Platformer
             //Change to jump state
             if (m_PlayerRef.CharacterController.IsGrounded)
             {
-                if (InputManager.Instance.GetButton("Jump"))
+                if (InputManager.Instance.GetButton("Jump_" + m_PlayerRef.PlayerID))
                 {
                     //Change to the jump state
                     m_PlayerRef.SetState(Player.PlayerState.Jump);
@@ -220,12 +272,18 @@ namespace Platformer
                 else
                 {
                     //Stick better to the ground
-                    deltaY -= m_PlayerRef.Gravity * 10.0f;
+                    deltaY -= movementProperties.Gravity * 10.0f;
                 }
+            }
+            else
+            {
+                //Change to the fall state
+                deltaY = 0.0f;
+                m_PlayerRef.SetState(Player.PlayerState.Fall);
             }
 
             //Shoot
-            m_PlayerRef.SetFiring((InputManager.Instance.GetButton("Fire")));
+            m_PlayerRef.SetFiring((InputManager.Instance.GetButton("Fire_" + m_PlayerRef.PlayerID)));
 
             return new Vector2(deltaX, deltaY);
         }
@@ -253,29 +311,31 @@ namespace Platformer
 
         public Vector2 Update(Vector2 velocity)
         {
+            MovementProperties movementProperties = m_PlayerRef.MovementProperties;
+
             float deltaX = velocity.x;
-            float deltaY = velocity.y - m_PlayerRef.Gravity;
+            float deltaY = velocity.y - movementProperties.Gravity;
 
             //Moving horizontally
-            float horizValue = InputManager.Instance.GetAxis("HorizontalAxis");
-            deltaX += horizValue * m_PlayerRef.Acceleration;
+            float horizValue = InputManager.Instance.GetAxis("HorizontalAxis_" + m_PlayerRef.PlayerID);
+            deltaX += horizValue * movementProperties.Acceleration;
 
             if (horizValue == 0.0f && deltaX != 0.0f)
             {
                 float sign = Mathf.Sign(m_PlayerRef.Velocity.x);
-                deltaX -= m_PlayerRef.Friction * sign;
+                deltaX -= movementProperties.Friction * sign;
 
                 if (sign != Mathf.Sign(deltaX))
                     deltaX = 0.0f;
             }
 
-            if (InputManager.Instance.GetButton("JumpPressed"))
+            if (InputManager.Instance.GetButton("JumpPressed_" + m_PlayerRef.PlayerID))
             {
-                float factor = 1.0f - (m_CurrentJumpTime / m_PlayerRef.MaxJumpTime);
-                deltaY += (m_PlayerRef.JumpAcceleration * (factor * factor));
+                float factor = 1.0f - (m_CurrentJumpTime / movementProperties.MaxJumpTime);
+                deltaY += (movementProperties.JumpAcceleration * (factor * factor));
 
                 m_CurrentJumpTime += Time.deltaTime;
-                if (m_CurrentJumpTime > m_PlayerRef.MaxJumpTime)
+                if (m_CurrentJumpTime > movementProperties.MaxJumpTime)
                 {
                     m_PlayerRef.SetState(Player.PlayerState.Fall);
                 }
@@ -286,7 +346,7 @@ namespace Platformer
             }
 
             //Shoot
-            m_PlayerRef.SetFiring((InputManager.Instance.GetButton("Fire")));
+            m_PlayerRef.SetFiring((InputManager.Instance.GetButton("Fire_" + m_PlayerRef.PlayerID)));
 
             return new Vector2(deltaX, deltaY);
         }
@@ -312,19 +372,21 @@ namespace Platformer
 
         public Vector2 Update(Vector2 velocity)
         {
+            MovementProperties movementProperties = m_PlayerRef.MovementProperties;
+
             float deltaX = velocity.x;
-            float deltaY = velocity.y - m_PlayerRef.Gravity;
+            float deltaY = velocity.y - movementProperties.Gravity;
 
             //Potentional double jump
 
             //Moving horizontally
-            float horizValue = InputManager.Instance.GetAxis("HorizontalAxis");
-            deltaX += horizValue * m_PlayerRef.Acceleration;
+            float horizValue = InputManager.Instance.GetAxis("HorizontalAxis_" + m_PlayerRef.PlayerID);
+            deltaX += horizValue * movementProperties.Acceleration;
 
             if (horizValue == 0.0f && deltaX != 0.0f)
             {
                 float sign = Mathf.Sign(m_PlayerRef.Velocity.x);
-                deltaX -= m_PlayerRef.Friction * sign;
+                deltaX -= movementProperties.Friction * sign;
 
                 if (sign != Mathf.Sign(deltaX))
                     deltaX = 0.0f;
@@ -336,7 +398,7 @@ namespace Platformer
             }
 
             //Shoot
-            m_PlayerRef.SetFiring((InputManager.Instance.GetButton("Fire")));
+            m_PlayerRef.SetFiring((InputManager.Instance.GetButton("Fire_" + m_PlayerRef.PlayerID)));
 
             return new Vector2(deltaX, deltaY);
         }

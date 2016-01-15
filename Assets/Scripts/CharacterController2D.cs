@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-namespace Platformer
+namespace Sjabloon
 {
     [RequireComponent(typeof(BoxCollider2D), typeof(Rigidbody2D))]
     public class CharacterController2D : MonoBehaviour
@@ -11,11 +11,11 @@ namespace Platformer
         private Bounds m_BoundsWithSkin;
 
         [SerializeField]
-        private LayerMask m_PlatformMask = 0;
-        public LayerMask PlatformMask
+        private LayerMask m_CollisionMask = 0;
+        public LayerMask CollisionMask
         {
-            get { return m_PlatformMask; }
-            set { m_PlatformMask = value; }
+            get { return m_CollisionMask; }
+            set { m_CollisionMask = value; }
         }
 
         [SerializeField]
@@ -108,16 +108,16 @@ namespace Platformer
                         rayPosition.x = m_BoundsWithSkin.min.x;
                     }
 
-                    rayPosition.y = m_BoundsWithSkin.min.y + (i * m_DistanceBetweenHorizontalRays);
+                    rayPosition.y = m_BoundsWithSkin.max.y - (i * m_DistanceBetweenHorizontalRays);
                     rayPosition.z = 0.0f;
 
                     Debug.DrawRay(rayPosition, rayDirection * rayDistance, Color.red);
 
-                    RaycastHit2D raycastHit = Physics2D.Raycast(rayPosition, rayDirection, rayDistance, m_PlatformMask);
+                    RaycastHit2D raycastHit = Physics2D.Raycast(rayPosition, rayDirection, rayDistance, m_CollisionMask);
 
                     if (raycastHit)
                     {
-                        if (i == 0)
+                        if (i == m_TotalHorizontalRays - 1)
                         {
                             HandleUpwardSlope(ref deltaMovement, Vector2.Angle(raycastHit.normal, Vector2.up));
                             return;
@@ -184,7 +184,7 @@ namespace Platformer
 
                     Debug.DrawRay(rayPosition, rayDirection * rayDistance, Color.yellow);
 
-                    RaycastHit2D raycastHit = Physics2D.Raycast(rayPosition, rayDirection, rayDistance, m_PlatformMask);
+                    RaycastHit2D raycastHit = Physics2D.Raycast(rayPosition, rayDirection, rayDistance, m_CollisionMask);
 
                     if (raycastHit)
                     {
@@ -200,7 +200,9 @@ namespace Platformer
                         }
 
                         firstRaycastHit = false;
-                        m_IsGrounded = true;
+
+                        if (!isGoingUp)
+                            m_IsGrounded = true;
                     }
                 }
             }

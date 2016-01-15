@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Platformer
+namespace Sjabloon
 {
     public class InputManager : Singleton<InputManager>
     {
