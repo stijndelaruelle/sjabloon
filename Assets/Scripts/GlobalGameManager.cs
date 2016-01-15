@@ -7,8 +7,8 @@ namespace Sjabloon
 {
     public class GlobalGameManager : Singleton<GlobalGameManager>
     {
-        //[SerializeField]
-        //private List<PlayerController> m_Players;
+        [SerializeField]
+        private List<DamageableObject> m_Players;
         private int m_DeathPlayers;
 
         private event Action m_GameStartEvent;
@@ -41,10 +41,10 @@ namespace Sjabloon
 
         private void Start()
         {
-            //foreach(PlayerController player in m_Players)
-            //{
-            //    player.DeathEvent += OnPlayerDeath;
-            //}
+            foreach (DamageableObject player in m_Players)
+            {
+                player.DeathEvent += OnPlayerDeath;
+            }
 
             //Time.timeScale = 0.0f;
         }
@@ -53,11 +53,11 @@ namespace Sjabloon
         {
             base.OnDestroy();
 
-            //foreach (PlayerController player in m_Players)
-            //{
-            //    player.DeathEvent -= OnPlayerDeath;
-            //}
-            //m_Players.Clear();
+            foreach (DamageableObject player in m_Players)
+            {
+                player.DeathEvent -= OnPlayerDeath;
+            }
+            m_Players.Clear();
         }
 
         private void Update()
@@ -70,18 +70,13 @@ namespace Sjabloon
 
         private void OnPlayerDeath()
         {
-            m_DeathPlayers += 1;
+            //m_DeathPlayers += 1;
 
             //if (m_DeathPlayers >= m_Players.Count)
             //{
-            //    StartCoroutine(DelayRoutine(1.0f, GameOver));
-            //    GlobalEffects.Instance.Screenshake.StartShake(1.0f, 1.0f);
+                StartCoroutine(DelayRoutine(1.0f, GameOver));
+                GlobalEffects.Instance.Screenshake.StartShake(0.25f, 1.0f);
             //}
-        }
-
-        private void OnBossDeath()
-        {
-            StartCoroutine(DelayRoutine(1.5f, GameComplete));
         }
 
         private void StartGame()
@@ -98,7 +93,7 @@ namespace Sjabloon
             if (m_GameOverEvent != null)
                 m_GameOverEvent();
 
-            StartCoroutine(GameDownSlowMotionRoutine(0.5f, 1.0f));
+            //StartCoroutine(GameDownSlowMotionRoutine(0.5f, 1.0f));
         }
 
         private void GameComplete()
@@ -106,7 +101,7 @@ namespace Sjabloon
             if (m_GameCompleteEvent != null)
                 m_GameCompleteEvent();
 
-            StartCoroutine(GameDownSlowMotionRoutine(0.5f, 0.5f));
+            //StartCoroutine(GameDownSlowMotionRoutine(0.5f, 0.5f));
         }
 
         //FIX ME: Should not be in the game manager

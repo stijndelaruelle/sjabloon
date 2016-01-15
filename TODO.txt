@@ -1,7 +1,5 @@
-- Local multiplayer
 - 360 degree shooting (RIVE of tank spel)
 
-- Dying
 - Basic enemy
 - Basic pickup
 

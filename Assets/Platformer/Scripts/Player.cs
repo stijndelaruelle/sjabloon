@@ -81,11 +81,13 @@ namespace Sjabloon
         }
 
         [SerializeField]
-        private Animator m_Animator;
-        private bool m_IsFiring;
+        private DamageableObject m_DamageableObject;
 
         [SerializeField]
         private Gun m_Gun;
+
+        [SerializeField]
+        private Animator m_Animator;
 
         [SerializeField]
         private MovementProperties m_MovementProperties;
@@ -103,11 +105,22 @@ namespace Sjabloon
             get { return m_Velocity; }
         }
 
+        private bool m_IsFiring;
+
         //Functions
         private void Start()
         {
+            m_DamageableObject.DamageEvent += OnDamage;
+            m_DamageableObject.DeathEvent += OnDeath;
+
             InitializeControls();
             InitializeStates();
+        }
+
+        private void OnDestroy()
+        {
+            m_DamageableObject.DamageEvent -= OnDamage;
+            m_DamageableObject.DeathEvent -= OnDeath;
         }
 
         private void InitializeControls()
@@ -192,7 +205,7 @@ namespace Sjabloon
 
         private void UpdateRotation()
         {
-            if (m_Velocity.x == 0.0f)
+            if (Mathf.Abs(m_Velocity.x) < 0.01f)
                 return;
 
             float rotation = 0.0f;
@@ -220,6 +233,21 @@ namespace Sjabloon
         {
             m_IsFiring = fireState;
         }
+
+        private void OnDamage()
+        {
+        }
+
+        private void OnDeath()
+        {
+            //if (m_DeathEffectPool)
+            //    m_DeathEffectPool.ActivateAvailableObject(m_DamageableObject.transform.position, m_DamageableObject.transform.rotation);
+
+            gameObject.SetActive(false);
+
+            //GlobalEffects.Instance.Screenshake.StartShake(m_ScreenshakeStrength, m_ScreenshakeLength);
+        }
+
     }
 
     public class WalkState : CharacterState

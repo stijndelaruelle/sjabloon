@@ -171,7 +171,7 @@ namespace Sjabloon
             return m_Damage;
         }
 
-        public void HadContact(GameObject go)
+        public virtual void HadContact(GameObject go)
         {
             //Find the contact point
             //RaycastHit2D hit = Physics2D.Raycast(transform.position, transform.up * -1.0f);
